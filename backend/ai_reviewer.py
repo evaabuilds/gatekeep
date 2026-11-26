@@ -19,23 +19,31 @@ import httpx
 # Ready-made settings for providers we know. Anything here can be overridden
 # in .env with AI_BASE_URL / AI_MODEL.
 PROVIDERS = {
+    # Google Gemini: free tier available (key from https://aistudio.google.com).
+    # gemini-3.5-flash-lite is "Free of charge" on the free tier (checked Nov 2026).
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "model": "gemini-3.5-flash-lite",
+        "max_tokens_field": "max_tokens",
+        "extra": {},
+    },
+    # Xiaomi MiMo: pay-as-you-go (sk- keys), very cheap but not free.
     "mimo": {
         "base_url": "https://api.xiaomimimo.com/v1",
         "model": "mimo-v2.6-flash",
+        "max_tokens_field": "max_completion_tokens",
         # MiMo can "think" before answering; we turn it off for speed and cost.
         "extra": {"thinking": {"type": "disabled"}},
     },
-    "gemini": {
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-        "model": "gemini-2.5-flash",
-        "extra": {},
-    },
+    # Ollama: runs a model on your own PC, free and offline, no key needed.
     "ollama": {
         "base_url": "http://localhost:11434/v1",
         "model": "qwen2.5-coder:7b",
+        "max_tokens_field": "max_tokens",
         "extra": {},
     },
 }
+DEFAULT_PROVIDER = "gemini"
 
 TIMEOUT_SECONDS = 90
 SEVERITIES = {"high", "medium", "low"}
@@ -79,8 +87,10 @@ class AIReviewError(Exception):
 def get_settings() -> dict | None:
     """Read AI settings from environment variables (.env). None = AI disabled."""
     api_key = os.getenv("AI_API_KEY", "").strip()
-    provider = os.getenv("AI_PROVIDER", "mimo").strip().lower()
-    preset = PROVIDERS.get(provider, {"base_url": "", "model": "", "extra": {}})
+    provider = os.getenv("AI_PROVIDER", DEFAULT_PROVIDER).strip().lower()
+    # Unknown provider name: treat it as a generic OpenAI-compatible service
+    # (then AI_BASE_URL and AI_MODEL must be set in .env).
+    preset = PROVIDERS.get(provider, {"base_url": "", "model": "", "max_tokens_field": "max_tokens", "extra": {}})
 
     # Ollama runs on your own PC and needs no key; everything else does.
     if not api_key and provider != "ollama":
@@ -91,6 +101,7 @@ def get_settings() -> dict | None:
         "api_key": api_key,
         "base_url": os.getenv("AI_BASE_URL", preset["base_url"]).rstrip("/"),
         "model": os.getenv("AI_MODEL", preset["model"]),
+        "max_tokens_field": preset["max_tokens_field"],
         "extra": preset["extra"],
     }
 
@@ -109,7 +120,7 @@ def review(code: str, language: str, semgrep_findings: list[dict]) -> dict:
             {"role": "user", "content": user_message},
         ],
         "temperature": 0.2,  # low = more focused, repeatable answers
-        "max_completion_tokens": 4096,
+        settings["max_tokens_field"]: 4096,  # cap answer length (field name differs per provider)
         **settings["extra"],
     }
     headers = {"Authorization": f"Bearer {settings['api_key']}"} if settings["api_key"] else {}

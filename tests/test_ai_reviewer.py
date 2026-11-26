@@ -43,6 +43,17 @@ def test_ai_disabled_without_key(monkeypatch):
     assert get_settings() is None
 
 
+def test_gemini_is_default(monkeypatch):
+    monkeypatch.setenv("AI_API_KEY", "test-key")
+    monkeypatch.delenv("AI_PROVIDER", raising=False)
+    monkeypatch.delenv("AI_MODEL", raising=False)
+    monkeypatch.delenv("AI_BASE_URL", raising=False)
+    settings = get_settings()
+    assert settings["provider"] == "gemini"
+    assert settings["base_url"] == "https://generativelanguage.googleapis.com/v1beta/openai"
+    assert settings["max_tokens_field"] == "max_tokens"
+
+
 def test_mimo_defaults(monkeypatch):
     monkeypatch.setenv("AI_API_KEY", "sk-test")
     monkeypatch.setenv("AI_PROVIDER", "mimo")
