@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GateKeep Security Report</title>
+<style>
+body { font-family: "Segoe UI", Arial, sans-serif; max-width: 900px; margin: 30px auto; padding: 0 20px; color: #222; }
+h1 { margin-bottom: 4px; }
+.meta { color: #666; font-size: 14px; }
+.summary { display: flex; gap: 12px; margin: 20px 0; }
+.box { flex: 1; padding: 12px; border-radius: 8px; background: #f5f5f5; text-align: center; }
+.box b { display: block; font-size: 26px; }
+.box.high b { color: #d93025; } .box.medium b { color: #e37400; } .box.low b { color: #1a73e8; }
+.finding { border: 1px solid #ddd; border-left: 6px solid #555; border-radius: 8px; padding: 12px 16px; margin: 14px 0;
+           page-break-inside: avoid; }
+.finding h2 { font-size: 17px; margin: 0 0 4px; }
+.tags { font-size: 13px; color: #555; margin: 0 0 8px; }
+.label { font-size: 12px; font-weight: bold; color: #555; margin-top: 10px; }
+pre { background: #f6f8fa; padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; font-size: 13px; margin: 4px 0; }
+pre.fix { background: #e9f7ef; border: 1px solid #b7e4c7; }
+.foot { color: #888; font-size: 12px; margin-top: 30px; }
+</style>
+</head>
+<body>
+  <h1>GateKeep Security Report</h1>
+  <p class="meta">Created: 26 Nov 2026, 07:08 PM · Language: python
+     · AI review: AI found 3 extra issue(s).</p>
+
+  <div class="summary">
+    <div class="box high"><b>4</b> High</div>
+    <div class="box medium"><b>5</b> Medium</div>
+    <div class="box low"><b>0</b> Low</div>
+  </div>
+
+  
+  <div class="finding" style="border-left-color:#d93025">
+    <h2>1. Hardcoded API Key</h2>
+    <p class="tags"><span style="color:#d93025"><b>HIGH</b></span>
+       · line 8 · found by AI · CWE-798: Use of Hard-coded Credentials</p>
+    <p>A sensitive live API key is hardcoded directly into the source code. Anyone with access to the repository can steal and abuse this secret.</p>
+    <div class="label">Problem code</div>
+    <pre>API_KEY = &quot;sk_live_1234567890abcdef&quot;  # hardcoded secret</pre>
+    <div class="label">Suggested fix</div><pre class="fix">API_KEY = os.environ.get(&quot;API_KEY&quot;)</pre>
+  </div>
+
+  <div class="finding" style="border-left-color:#d93025">
+    <h2>2. Sqlalchemy execute raw query</h2>
+    <p class="tags"><span style="color:#d93025"><b>HIGH</b></span>
+       · line 15 · found by Semgrep · CWE-89: Improper Neutralization of Special Elements used in an SQL Command (&#x27;SQL Injection&#x27;)</p>
+    <p>User input is directly concatenated into a raw SQL string, allowing an attacker to manipulate the query structure. This can lead to SQL injection, exposing or modifying database contents.</p>
+    <div class="label">Problem code</div>
+    <pre>    cur.execute(&quot;SELECT * FROM users WHERE name = &#x27;%s&#x27;&quot; % username)</pre>
+    <div class="label">Suggested fix</div><pre class="fix">cur.execute(&quot;SELECT * FROM users WHERE name = ?&quot;, (username,))</pre>
+  </div>
+
+  <div class="finding" style="border-left-color:#d93025">
+    <h2>3. Subprocess shell true</h2>
+    <p class="tags"><span style="color:#d93025"><b>HIGH</b></span>
+       · line 21 · found by Semgrep · CWE-78: Improper Neutralization of Special Elements used in an OS Command (&#x27;OS Command Injection&#x27;)</p>
+    <p>Using subprocess with `shell=True` passes the command string directly to the system shell. An attacker can inject shell metacharacters to execute arbitrary system commands.</p>
+    <div class="label">Problem code</div>
+    <pre>    return subprocess.call(&quot;ping -c 1 &quot; + host, shell=True)</pre>
+    <div class="label">Suggested fix</div><pre class="fix">return subprocess.call([&quot;ping&quot;, &quot;-c&quot;, &quot;1&quot;, host])</pre>
+  </div>
+
+  <div class="finding" style="border-left-color:#d93025">
+    <h2>4. Command Injection via os.system</h2>
+    <p class="tags"><span style="color:#d93025"><b>HIGH</b></span>
+       · lines 44-45 · found by AI · CWE-78: Improper Neutralization of Special Elements used in an OS Command</p>
+    <p>The `os.system` function evaluates a concatenated command string inside a shell. If untrusted input is passed to `delete_file`, an attacker can delete arbitrary system files.</p>
+    <div class="label">Problem code</div>
+    <pre>def delete_file(name):
+    os.system(&quot;rm &quot; + name)</pre>
+    <div class="label">Suggested fix</div><pre class="fix">os.remove(name)</pre>
+  </div>
+
+  <div class="finding" style="border-left-color:#e37400">
+    <h2>5. Formatted sql query</h2>
+    <p class="tags"><span style="color:#e37400"><b>MEDIUM</b></span>
+       · line 15 · found by Semgrep · CWE-89: Improper Neutralization of Special Elements used in an SQL Command (&#x27;SQL Injection&#x27;)</p>
+    <p>Python string formatting is used to build a SQL query, exposing the application to SQL injection vulnerabilities. Always use parameterized queries to separate code from data.</p>
+    <div class="label">Problem code</div>
+    <pre>    cur.execute(&quot;SELECT * FROM users WHERE name = &#x27;%s&#x27;&quot; % username)</pre>
+    <div class="label">Suggested fix</div><pre class="fix">cur.execute(&quot;SELECT * FROM users WHERE name = ?&quot;, (username,))</pre>
+  </div>
+
+  <div class="finding" style="border-left-color:#e37400">
+    <h2>6. Avoid pickle</h2>
+    <p class="tags"><span style="color:#e37400"><b>MEDIUM</b></span>
+       · line 26 · found by Semgrep · CWE-502: Deserialization of Untrusted Data</p>
+    <p>The `pickle` module is not secure for deserializing untrusted data. An attacker can craft malicious serialized payloads that execute arbitrary code upon unpickling.</p>
+    <div class="label">Problem code</div>
+    <pre>    return pickle.loads(data)</pre>
+    <div class="label">Suggested fix</div><pre class="fix">import json
+return json.loads(data)</pre>
+  </div>
+
+  <div class="finding" style="border-left-color:#e37400">
+    <h2>7. Md5 used as password</h2>
+    <p class="tags"><span style="color:#e37400"><b>MEDIUM</b></span>
+       · line 31 · found by Semgrep · CWE-327: Use of a Broken or Risky Cryptographic Algorithm</p>
+    <p>MD5 is a weak hashing algorithm that is easily cracked using modern hardware and rainbow tables. Passwords should instead be hashed using strong, slow hashing functions like bcrypt or Argon2.</p>
+    <div class="label">Problem code</div>
+    <pre>    return hashlib.md5(password.encode()).hexdigest()</pre>
+    <div class="label">Suggested fix</div><pre class="fix">import hashlib
+return hashlib.pbkdf2_hmac(&#x27;sha256&#x27;, password.encode(), b&#x27;salt&#x27;, 100000).hex()</pre>
+  </div>
+
+  <div class="finding" style="border-left-color:#e37400">
+    <h2>8. Eval detected</h2>
+    <p class="tags"><span style="color:#e37400"><b>MEDIUM</b></span>
+       · line 36 · found by Semgrep · CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code (&#x27;Eval Injection&#x27;)</p>
+    <p>The `eval()` function executes string input as Python code. If untrusted user input reaches `eval`, it leads to immediate remote code execution on the server.</p>
+    <div class="label">Problem code</div>
+    <pre>    return eval(expr)</pre>
+    <div class="label">Suggested fix</div><pre class="fix">import ast
+return ast.literal_eval(expr)</pre>
+  </div>
+
+  <div class="finding" style="border-left-color:#e37400">
+    <h2>9. Insecure Withdrawal Logic</h2>
+    <p class="tags"><span style="color:#e37400"><b>MEDIUM</b></span>
+       · lines 39-41 · found by AI · CWE-20: Improper Input Validation</p>
+    <p>The function does not validate if the withdrawal amount is negative or exceeds the available balance. An attacker could withdraw negative amounts to increase their balance or overdraw funds.</p>
+    <div class="label">Problem code</div>
+    <pre>def withdraw(balance, amount):
+    # Logic bug (Semgrep can&#x27;t see this): no check for negative amount or overdraft
+    return balance - amount</pre>
+    <div class="label">Suggested fix</div><pre class="fix">if amount &lt;= 0 or amount &gt; balance:
+    raise ValueError(&quot;Invalid amount&quot;)
+return balance - amount</pre>
+  </div>
+
+  <p class="foot">Generated by GateKeep (Semgrep + AI review). AI suggestions can be wrong:
+     always review fixes before using them.</p>
+</body>
+</html>

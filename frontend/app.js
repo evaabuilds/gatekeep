@@ -10,6 +10,10 @@ const summaryEl = document.getElementById("summary");
 const findingsEl = document.getElementById("findings");
 const charCount = document.getElementById("char-count");
 const useAiBox = document.getElementById("use-ai");
+const reportBtn = document.getElementById("report-btn");
+
+// Remembers the result of the last scan, so the report button can use it.
+let lastResult = null;
 
 const MAX_CHARS = 50000;
 
@@ -34,6 +38,8 @@ scanBtn.addEventListener("click", async () => {
 
   scanBtn.disabled = true;
   scanBtn.textContent = "Scanning...";
+  reportBtn.disabled = true;  // no report until the new scan finishes
+  lastResult = null;
   summaryEl.replaceChildren();
   findingsEl.replaceChildren();
   setStatus(useAiBox.checked
@@ -49,11 +55,45 @@ scanBtn.addEventListener("click", async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Invalid request");
     showResults(data);
+    lastResult = data;
+    reportBtn.disabled = false;
   } catch (err) {
     setStatus(`Scan failed: ${err.message}`, true);
   } finally {
     scanBtn.disabled = false;
     scanBtn.textContent = "Scan code";
+  }
+});
+
+// 5. "Download report": send the last result to /report and save the file it returns.
+reportBtn.addEventListener("click", async () => {
+  if (!lastResult) return;
+  reportBtn.disabled = true;
+  try {
+    const res = await fetch("/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lastResult),
+    });
+    if (!res.ok) throw new Error(`server said ${res.status}`);
+
+    // A Blob is a chunk of file data held in the browser's memory.
+    const blob = await res.blob();
+    // Read the file name the server suggested in the Content-Disposition header.
+    const header = res.headers.get("Content-Disposition") || "";
+    const filename = (header.match(/filename="(.+?)"/) || [])[1] || "gatekeep-report.html";
+
+    // Make a temporary link to the Blob, "click" it to start the download, then clean up.
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    setStatus(`Report download failed: ${err.message}`, true);
+  } finally {
+    reportBtn.disabled = false;
   }
 });
 

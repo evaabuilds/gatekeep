@@ -5,16 +5,18 @@ Run it with:
 Then open http://127.0.0.1:8000/docs in the browser.
 """
 
+from datetime import datetime
 from typing import Literal
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from backend import ai_reviewer
+from backend.report import build_report
 from backend.scanner import PROJECT_ROOT, ScannerError, run_semgrep
 
 # Load secrets/settings from the .env file into environment variables.
@@ -98,3 +100,19 @@ async def scan(request: ScanRequest):
         "ai": ai,
         "findings": findings,
     }
+
+
+@app.post("/report")
+def report(result: dict = Body(..., description="The JSON that /scan returned")):
+    """Turn a scan result into an HTML report file that the browser downloads."""
+    if not isinstance(result.get("findings"), list):
+        raise HTTPException(status_code=422, detail="Send the result of /scan to build a report.")
+
+    html = build_report(result)
+    filename = f"gatekeep-report-{datetime.now():%Y%m%d-%H%M}.html"
+    return Response(
+        content=html,
+        media_type="text/html",
+        # "attachment" tells the browser: save this as a file, don't just show it.
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
