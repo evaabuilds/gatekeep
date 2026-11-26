@@ -7,13 +7,18 @@ Then open http://127.0.0.1:8000/docs in the browser.
 
 from typing import Literal
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from backend import ai_reviewer
 from backend.scanner import PROJECT_ROOT, ScannerError, run_semgrep
+
+# Load secrets/settings from the .env file into environment variables.
+load_dotenv(PROJECT_ROOT / ".env")
 
 MAX_CODE_CHARS = 50_000  # keep scans fast and stop huge uploads
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -49,6 +54,7 @@ class ScanRequest(BaseModel):
     """What the user sends to /scan."""
     code: str = Field(..., min_length=1, max_length=MAX_CODE_CHARS, description="Source code to check")
     language: Literal["python", "javascript"]
+    use_ai: bool = Field(True, description="Also run the AI review (needs AI_API_KEY in .env)")
 
 
 @app.get("/health")
@@ -59,17 +65,34 @@ def health():
 
 @app.post("/scan")
 async def scan(request: ScanRequest):
-    """Scan code with Semgrep and return the findings."""
+    """Layer 1: Semgrep. Layer 2: AI review. Returns all findings together."""
     try:
         # Semgrep is slow-ish, so run it in a worker thread and keep the server responsive.
         findings = await run_in_threadpool(run_semgrep, request.code, request.language)
     except ScannerError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    summary = {level: sum(f["severity"] == level for f in findings) for level in ("high", "medium", "low")}
+    ai = {"enabled": False, "status": "skipped", "message": "AI review was not requested."}
+    if request.use_ai:
+        try:
+            result = await run_in_threadpool(ai_reviewer.review, request.code, request.language, findings)
+            # Attach the AI's plain-language explanation + fix to each Semgrep finding.
+            for index, note in result["semgrep_notes"].items():
+                findings[index].update(note)
+            findings += result["ai_findings"]
+            ai = {"enabled": True, "status": "ok",
+                  "message": f"AI found {len(result['ai_findings'])} extra issue(s)."}
+        except ai_reviewer.AIReviewError as exc:
+            # The scan still works without AI; we just tell the user why AI was skipped.
+            ai = {"enabled": False, "status": "error", "message": str(exc)}
+
+    order = {"high": 0, "medium": 1, "low": 2}
+    findings.sort(key=lambda f: (order[f["severity"]], f["line_start"]))
+    summary = {level: sum(f["severity"] == level for f in findings) for level in order}
     return {
         "language": request.language,
         "total": len(findings),
         "summary": summary,
+        "ai": ai,
         "findings": findings,
     }

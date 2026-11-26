@@ -9,6 +9,7 @@ const statusEl = document.getElementById("status");
 const summaryEl = document.getElementById("summary");
 const findingsEl = document.getElementById("findings");
 const charCount = document.getElementById("char-count");
+const useAiBox = document.getElementById("use-ai");
 
 const MAX_CHARS = 50000;
 
@@ -35,13 +36,15 @@ scanBtn.addEventListener("click", async () => {
   scanBtn.textContent = "Scanning...";
   summaryEl.replaceChildren();
   findingsEl.replaceChildren();
-  setStatus("Scanning with Semgrep... (takes a few seconds)");
+  setStatus(useAiBox.checked
+    ? "Scanning with Semgrep, then asking the AI reviewer... (can take 20-40 seconds)"
+    : "Scanning with Semgrep... (takes a few seconds)");
 
   try {
     const res = await fetch("/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, language: languageSelect.value }),
+      body: JSON.stringify({ code, language: languageSelect.value, use_ai: useAiBox.checked }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Invalid request");
@@ -60,11 +63,13 @@ function setStatus(message, isError = false) {
 }
 
 function showResults(data) {
+  const aiNote = data.ai.status === "ok" ? ` ${data.ai.message}`
+    : data.ai.status === "error" ? ` (AI skipped: ${data.ai.message})` : "";
   if (data.total === 0) {
-    setStatus("No issues found by Semgrep. 🎉");
+    setStatus(`No issues found. 🎉${aiNote}`, data.ai.status === "error");
     return;
   }
-  setStatus(`${data.total} issue${data.total === 1 ? "" : "s"} found.`);
+  setStatus(`${data.total} issue${data.total === 1 ? "" : "s"} found.${aiNote}`, data.ai.status === "error");
 
   for (const level of ["high", "medium", "low"]) {
     if (data.summary[level]) summaryEl.append(makeEl("span", `badge ${level}`, `${data.summary[level]} ${level}`));
@@ -83,11 +88,16 @@ function makeCard(f) {
     makeEl("span", "card-title", f.title),
     makeEl("span", "card-line", f.line_start === f.line_end ? `line ${f.line_start}` : `lines ${f.line_start}-${f.line_end}`),
   );
-  card.append(head, makeEl("p", "", f.message), makeEl("pre", "", f.code));
+  // Prefer the AI's simple explanation; fall back to Semgrep's technical message.
+  card.append(head, makeEl("p", "", f.explanation || f.message), makeEl("pre", "", f.code));
+
+  if (f.fix) {
+    card.append(makeEl("div", "fix-label", "Suggested fix"), makeEl("pre", "fix", f.fix));
+  }
 
   const tags = makeEl("div", "tags");
   for (const cwe of f.cwe) tags.append(makeEl("span", "tag", cwe.split(":")[0]));
-  tags.append(makeEl("span", "tag", f.source));
+  tags.append(makeEl("span", `tag source-${f.source}`, f.source === "ai" ? "found by AI" : "semgrep"));
   card.append(tags);
   return card;
 }
