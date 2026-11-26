@@ -1,0 +1,17 @@
+# Secrets: never commit these
+.env
+*.env
+
+# Virtual environments (anyone can recreate them from requirements.txt)
+.venv/
+tools/semgrep-env/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Editor / OS junk
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
