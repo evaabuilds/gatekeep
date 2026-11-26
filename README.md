@@ -1,4 +1,4 @@
-# GateKeep: AI Code Security Gate
+﻿# GateKeep: AI Code Security Gate
 
 Paste Python or JavaScript code and GateKeep checks it for security problems in two layers:
 
@@ -7,7 +7,9 @@ Paste Python or JavaScript code and GateKeep checks it for security problems in 
 
 Each finding comes with a severity, a plain-language explanation, and a suggested fix. Results can be downloaded as a report.
 
-> Status: work in progress (Milestone 2 of 6: Semgrep scanning works).
+> Status: work in progress (Milestone 3 of 6: web page works).
+
+![GateKeep screenshot](docs/screenshot-milestone3.jpg)
 
 ## Tech stack
 
@@ -29,7 +31,7 @@ python -m venv tools\semgrep-env
 .\.venv\Scripts\uvicorn backend.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs to try the API, or scan a sample file from a second terminal:
+Open http://127.0.0.1:8000 for the web page (or /docs for the API), or scan a sample file from a second terminal:
 
 ```powershell
 .\.venv\Scripts\python scripts\try_scan.py samples\vulnerable.py python
@@ -41,7 +43,8 @@ Open http://127.0.0.1:8000/docs to try the API, or scan a sample file from a sec
 
 - [x] 1. Project setup + health endpoint
 - [x] 2. Semgrep scan endpoint (`POST /scan`)
-- [ ] 3. Web page to paste code and see findings
+- [x] 3. Web page to paste code and see findings
 - [ ] 4. AI layer for logic issues, explanations and fixes
 - [ ] 5. Downloadable report
 - [ ] 6. Polish: tests, screenshots, sample vulnerable code
+

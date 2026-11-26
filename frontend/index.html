@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GateKeep · AI Code Security Gate</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">⛨</span>
+      <div>
+        <h1>GateKeep</h1>
+        <p class="tagline">Paste code. Find security issues before they ship.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Left side: the code input -->
+    <section class="panel input-panel">
+      <div class="panel-head">
+        <h2>Your code</h2>
+        <div class="controls">
+          <label for="language" class="visually-hidden">Language</label>
+          <select id="language">
+            <option value="python">Python</option>
+            <option value="javascript">JavaScript</option>
+          </select>
+          <button id="sample-btn" type="button" class="ghost">Load sample</button>
+        </div>
+      </div>
+      <textarea id="code" spellcheck="false"
+        placeholder="Paste Python or JavaScript code here..."></textarea>
+      <div class="panel-foot">
+        <span id="char-count" class="muted">0 / 50,000 characters</span>
+        <button id="scan-btn" type="button" class="primary">Scan code</button>
+      </div>
+    </section>
+
+    <!-- Right side: the results -->
+    <section class="panel results-panel" aria-live="polite">
+      <div class="panel-head">
+        <h2>Findings</h2>
+        <div id="summary" class="summary"></div>
+      </div>
+      <div id="status" class="status muted">Results will appear here after a scan.</div>
+      <div id="findings" class="findings"></div>
+    </section>
+  </main>
+
+  <footer class="footer muted">
+    Built with FastAPI + Semgrep. AI review coming soon.
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

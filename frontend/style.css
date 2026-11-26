@@ -1,0 +1,128 @@
+/* ---------- Colours and sizes in one place (CSS variables) ---------- */
+:root {
+  --bg: #0f1420;
+  --panel: #171e2e;
+  --panel-2: #1e2738;
+  --border: #2a3448;
+  --text: #e6eaf2;
+  --muted: #8a95ab;
+  --accent: #4f8cff;
+  --high: #ff5d5d;
+  --medium: #ffb547;
+  --low: #5dc8ff;
+  --radius: 12px;
+  --mono: "Cascadia Code", "Consolas", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Header ---------- */
+.topbar { padding: 20px 32px; border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 14px; }
+.logo {
+  font-size: 30px; width: 48px; height: 48px; display: grid; place-items: center;
+  border-radius: 12px; background: linear-gradient(135deg, var(--accent), #8a5cff);
+}
+h1 { margin: 0; font-size: 22px; }
+.tagline { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+
+/* ---------- Two-column layout ---------- */
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 24px 32px;
+}
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 70vh;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.panel-head h2 { margin: 0; font-size: 16px; }
+.panel-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+.controls { display: flex; gap: 8px; }
+
+textarea {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  tab-size: 4;
+}
+textarea:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+select, button {
+  font: inherit; font-size: 14px; border-radius: 8px; padding: 8px 14px;
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text); cursor: pointer;
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.primary:disabled { opacity: 0.6; cursor: wait; }
+button.ghost:hover { border-color: var(--accent); }
+
+.muted { color: var(--muted); font-size: 13px; }
+
+/* ---------- Results ---------- */
+.summary { display: flex; gap: 6px; }
+.status { padding: 8px 0; }
+.status.error { color: var(--high); }
+.findings { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+.badge {
+  font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.badge.high { background: rgba(255, 93, 93, 0.15); color: var(--high); }
+.badge.medium { background: rgba(255, 181, 71, 0.15); color: var(--medium); }
+.badge.low { background: rgba(93, 200, 255, 0.15); color: var(--low); }
+
+.card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--muted);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.card.high { border-left-color: var(--high); }
+.card.medium { border-left-color: var(--medium); }
+.card.low { border-left-color: var(--low); }
+.card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card-title { font-weight: 600; }
+.card-line { margin-left: auto; color: var(--muted); font-size: 12px; }
+.card p { margin: 8px 0; font-size: 14px; line-height: 1.5; color: #c8d0df; }
+.card pre {
+  margin: 8px 0 0; padding: 8px 10px; background: var(--bg); border-radius: 6px;
+  font-family: var(--mono); font-size: 12px; overflow-x: auto; white-space: pre-wrap;
+}
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.tag { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; }
+
+.footer { text-align: center; padding: 14px; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);
+}
