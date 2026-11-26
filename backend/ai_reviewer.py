@@ -13,6 +13,7 @@ the model name and the key change, and those live in the `.env` file.
 import json
 import os
 import re
+import time
 
 import httpx
 
@@ -25,7 +26,8 @@ PROVIDERS = {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
         "model": "gemini-3.5-flash-lite",
         "max_tokens_field": "max_tokens",
-        "extra": {},
+        # "JSON mode": the API guarantees the answer is valid JSON.
+        "extra": {"response_format": {"type": "json_object"}},
     },
     # Xiaomi MiMo: pay-as-you-go (sk- keys), very cheap but not free.
     "mimo": {
@@ -125,6 +127,25 @@ def review(code: str, language: str, semgrep_findings: list[dict]) -> dict:
     }
     headers = {"Authorization": f"Bearer {settings['api_key']}"} if settings["api_key"] else {}
 
+    # LLMs are not 100% reliable: occasionally the JSON comes back broken.
+    # So we try one more time before giving up.
+    last_error = None
+    for attempt in range(2):
+        try:
+            text = _call_api(settings, payload, headers)
+            data = _parse_json(text)
+            if not isinstance(data, dict):
+                raise AIReviewError("AI answer had the wrong shape.")
+            return _clean(data, code, len(semgrep_findings))
+        except AIReviewError as exc:
+            last_error = exc
+            if attempt == 0:
+                time.sleep(2)  # short pause, then retry once
+    raise last_error
+
+
+def _call_api(settings: dict, payload: dict, headers: dict) -> str:
+    """Send one chat request and return the model's text answer."""
     try:
         response = httpx.post(
             f"{settings['base_url']}/chat/completions",
@@ -138,11 +159,9 @@ def review(code: str, language: str, semgrep_findings: list[dict]) -> dict:
         raise AIReviewError(f"AI service error {response.status_code}: {_short_error(response)}")
 
     try:
-        text = response.json()["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, ValueError) as exc:
+        return response.json()["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, ValueError, TypeError) as exc:
         raise AIReviewError("AI service sent an unexpected response.") from exc
-
-    return _clean(_parse_json(text), code, len(semgrep_findings))
 
 
 def _build_user_message(code: str, language: str, findings: list[dict]) -> str:
@@ -224,9 +243,14 @@ def _clamp(value, total_lines: int) -> int:
 
 
 def _short_error(response: httpx.Response) -> str:
+    """Pull a short, readable message out of an error response (shapes differ per provider)."""
+    if response.status_code == 429:
+        return "rate limit reached (free tier). Wait a minute and try again."
     try:
         body = response.json()
-        err = body.get("error", body)
+        if isinstance(body, list) and body:  # Gemini sometimes wraps the error in a list
+            body = body[0]
+        err = body.get("error", body) if isinstance(body, dict) else body
         message = err.get("message") if isinstance(err, dict) else str(err)
     except ValueError:
         message = response.text

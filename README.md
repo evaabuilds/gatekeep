@@ -7,15 +7,15 @@ Paste Python or JavaScript code and GateKeep checks it for security problems in 
 
 Each finding comes with a severity, a plain-language explanation, and a suggested fix. Results can be downloaded as a report.
 
-> Status: work in progress (Milestone 3 of 6: web page works).
+> Status: work in progress (Milestone 4 of 6: Semgrep + AI review work).
 
-![GateKeep screenshot](docs/screenshot-milestone3.jpg)
+![GateKeep screenshot](docs/screenshot-ai-review.jpg)
 
 ## Tech stack
 
 - Python + FastAPI backend
 - Semgrep Community Edition (free)
-- Google Gemini API (free tier), Ollama as a local option later
+- AI reviewer: any OpenAI-compatible API. Google Gemini (free tier) by default; Xiaomi MiMo and local Ollama also supported. Set it up by copying `.env.example` to `.env` and adding your key.
 - Plain HTML/CSS/JavaScript frontend
 
 ## Run locally (Windows)
@@ -44,7 +44,7 @@ Open http://127.0.0.1:8000 for the web page (or /docs for the API), or scan a sa
 - [x] 1. Project setup + health endpoint
 - [x] 2. Semgrep scan endpoint (`POST /scan`)
 - [x] 3. Web page to paste code and see findings
-- [ ] 4. AI layer for logic issues, explanations and fixes
+- [x] 4. AI layer for logic issues, explanations and fixes
 - [ ] 5. Downloadable report
 - [ ] 6. Polish: tests, screenshots, sample vulnerable code
 

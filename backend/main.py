@@ -85,6 +85,8 @@ async def scan(request: ScanRequest):
         except ai_reviewer.AIReviewError as exc:
             # The scan still works without AI; we just tell the user why AI was skipped.
             ai = {"enabled": False, "status": "error", "message": str(exc)}
+        except Exception:  # safety net: an AI problem must never break the whole scan
+            ai = {"enabled": False, "status": "error", "message": "Unexpected problem in the AI review."}
 
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: (order[f["severity"]], f["line_start"]))

@@ -3,7 +3,20 @@
 Run with:  .venv/Scripts/python -m pytest
 """
 
-from backend.ai_reviewer import _clean, _parse_json, get_settings
+import httpx
+
+from backend.ai_reviewer import _clean, _parse_json, _short_error, get_settings
+
+
+def test_short_error_handles_list_body():
+    # Gemini can return the error wrapped in a list; this once crashed the server.
+    response = httpx.Response(503, json=[{"error": {"message": "The model is overloaded."}}])
+    assert _short_error(response) == "The model is overloaded."
+
+
+def test_short_error_rate_limit():
+    response = httpx.Response(429, json={"error": {"message": "quota"}})
+    assert "rate limit" in _short_error(response)
 
 CODE = "\n".join(f"line {i}" for i in range(1, 11))  # 10 lines
 
