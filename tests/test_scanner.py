@@ -43,9 +43,15 @@ def test_to_findings_cleans_semgrep_output():
     assert first["severity"] == "high"                 # ERROR -> high, sorted first
     assert first["line_start"] == 3
     assert second["severity"] == "medium"              # WARNING -> medium
-    assert second["title"] == "Eval detected"          # rule id -> readable title
+    assert second["title"] == "Dangerous eval() call"  # rule id -> readable title
+    assert first["title"] == "Command injection risk"
     assert second["code"] == "result = eval(user_input)"
     assert second["cwe"] == ["CWE-95: Eval Injection"]  # single string -> list
+
+
+def test_friendly_title_fallback():
+    assert scanner.friendly_title("python.x.some-new-rule") == "Some new rule"
+    assert scanner.friendly_title("python.lang.security.audit.md5-used-as-password") == "Weak hashing (MD5)"
 
 
 def test_unsupported_language_is_rejected():

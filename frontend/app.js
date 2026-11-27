@@ -12,9 +12,9 @@ const els = {
   language: $("language"), sampleBtn: $("sample-btn"), fileInput: $("file-input"), clearBtn: $("clear-btn"),
   charCount: $("char-count"), useAi: $("use-ai"), scanBtn: $("scan-btn"),
   reportBtn: $("report-btn"), reportMenu: $("report-menu"),
-  progress: $("progress"), scoreBox: $("score-box"), scoreRing: $("score-ring"),
-  scoreGrade: $("score-grade"), scoreNum: $("score-num"), scoreText: $("score-text"),
-  filters: $("filters"), search: $("search"), expandAll: $("expand-all"),
+  progress: $("progress"), welcome: $("welcome"), summary: $("summary"), scoreRing: $("score-ring"),
+  scoreGrade: $("score-grade"), scoreNum: $("score-num"), scoreVerdict: $("score-verdict"),
+  toolbar: $("toolbar"), search: $("search"), expandAll: $("expand-all"),
   status: $("status"), findings: $("findings"),
   historyBtn: $("history-btn"), drawer: $("history-drawer"), historyList: $("history-list"),
   historyClose: $("history-close"), historyClear: $("history-clear"), toast: $("toast"),
@@ -23,7 +23,8 @@ const els = {
 // App state: what we remember while the page is open.
 const state = {
   lastResult: null,      // the last /scan answer
-  filter: "all",         // which filter chip is active
+  severity: null,        // severity tile filter: null (all), "high", "medium" or "low"
+  source: "all",         // "all", "ai" or "semgrep"
   query: "",             // search text
   allOpen: false,        // "Expand all" toggle
 };
@@ -204,9 +205,10 @@ async function runScan() {
   els.reportBtn.disabled = true;
   state.lastResult = null;
   els.findings.replaceChildren();
-  els.scoreBox.hidden = true;
-  els.filters.hidden = true;
-  setStatus("");
+  els.welcome.hidden = true;
+  els.summary.hidden = true;
+  els.toolbar.hidden = true;
+  setStatus("Scanning...");
 
   // Progress: Semgrep first. The server does both steps in one request,
   // so after ~6 seconds (Semgrep's usual time) we move the spinner to "AI".
@@ -229,6 +231,7 @@ async function runScan() {
     setStep("semgrep", "done");
     setStep("ai", data.ai.status === "ok" ? "done" : "skipped");
     setStep("done", "done");
+    setTimeout(() => (els.progress.hidden = true), 1800);   // tidy up once the user has seen "Done"
 
     state.lastResult = data;
     showResults(data);
@@ -237,6 +240,7 @@ async function runScan() {
   } catch (err) {
     clearTimeout(aiTimer);
     els.progress.hidden = true;
+    els.welcome.hidden = false;
     setStatus(`Scan failed: ${err.message}`, true);
   } finally {
     els.scanBtn.disabled = false;
@@ -250,16 +254,28 @@ function setStatus(message, isError = false) {
 }
 
 /* =========================================================
-   5. RESULTS: score, filters, cards
+   5. RESULTS: summary, filters, grouped cards
    ========================================================= */
+const SEV_ICON = { high: "⛔", medium: "⚠️", low: "ℹ️" };
+const SEV_LABEL = { high: "High risk", medium: "Medium risk", low: "Low risk" };
+
 function showResults(data) {
   const ai = data.ai;
-  const aiNote = ai.status === "ok" ? ` ${ai.message}` : ai.status === "error" ? ` AI skipped: ${ai.message}` : "";
-  setStatus(`${data.total} issue${data.total === 1 ? "" : "s"} found.${aiNote}`, ai.status === "error");
+  const aiNote = ai.status === "ok" ? ` · ${ai.message}` : ai.status === "error" ? ` · AI skipped: ${ai.message}` : "";
+  setStatus(`${data.total} issue${data.total === 1 ? "" : "s"} found${aiNote}`, ai.status === "error");
 
+  // Fresh filters for every new result
+  state.severity = null;
+  state.source = "all";
+  state.query = "";
+  els.search.value = "";
+  document.querySelectorAll("[data-source]").forEach((b) => b.classList.toggle("active", b.dataset.source === "all"));
+
+  els.welcome.hidden = true;
   showScore(data);
   updateCounts(data.findings);
-  els.filters.hidden = data.total === 0;
+  els.summary.hidden = false;
+  els.toolbar.hidden = data.total === 0;
   renderCards();
 }
 
@@ -270,6 +286,13 @@ function computeScore(summary) {
   return { score, grade };
 }
 
+function verdictFor(score, summary) {
+  if (summary.high) return `Not safe to ship. Fix the ${summary.high} high-risk issue${summary.high > 1 ? "s" : ""} first.`;
+  if (score >= 90) return "Looks good! Only minor points to review.";
+  if (score >= 60) return "Mostly fine, but fix the medium issues before shipping.";
+  return "Several issues need attention before shipping.";
+}
+
 function showScore(data) {
   const { score, grade } = computeScore(data.summary);
   const color = score >= 75 ? "var(--fix)" : score >= 40 ? "var(--medium)" : "var(--high)";
@@ -277,32 +300,38 @@ function showScore(data) {
   els.scoreRing.style.setProperty("--ring-color", color);
   els.scoreGrade.textContent = grade;
   els.scoreNum.textContent = score;
-  const s = data.summary;
-  els.scoreText.textContent = `${s.high} high · ${s.medium} medium · ${s.low} low`;
-  els.scoreBox.hidden = false;
+  els.scoreVerdict.textContent = verdictFor(score, data.summary);
 }
 
 function updateCounts(findings) {
   const count = (fn) => findings.filter(fn).length;
+  for (const sev of ["high", "medium", "low"]) {
+    const n = count((f) => f.severity === sev);
+    $(`count-${sev}`).textContent = n;
+    document.querySelector(`.tile[data-sev="${sev}"]`).classList.toggle("zero", n === 0);
+  }
   $("count-all").textContent = findings.length;
-  $("count-high").textContent = count((f) => f.severity === "high");
-  $("count-medium").textContent = count((f) => f.severity === "medium");
-  $("count-low").textContent = count((f) => f.severity === "low");
   $("count-ai").textContent = count((f) => f.source === "ai");
   $("count-semgrep").textContent = count((f) => f.source === "semgrep");
+  document.querySelectorAll(".tile").forEach((t) => t.classList.remove("active"));
 }
 
-// Filter chips
-document.querySelectorAll(".chip-btn").forEach((chip) => chip.addEventListener("click", () => {
-  state.filter = chip.dataset.filter;
-  document.querySelectorAll(".chip-btn").forEach((c) => c.classList.toggle("active", c === chip));
+// Severity tiles work as filters: click = show only that level, click again = show all.
+document.querySelectorAll(".tile").forEach((tile) => tile.addEventListener("click", () => {
+  state.severity = state.severity === tile.dataset.sev ? null : tile.dataset.sev;
+  document.querySelectorAll(".tile").forEach((t) => t.classList.toggle("active", t.dataset.sev === state.severity));
   renderCards();
 }));
 
-// Search box
+// "Found by" switch: All / AI / Semgrep
+document.querySelectorAll("[data-source]").forEach((btn) => btn.addEventListener("click", () => {
+  state.source = btn.dataset.source;
+  document.querySelectorAll("[data-source]").forEach((b) => b.classList.toggle("active", b === btn));
+  renderCards();
+}));
+
 els.search.addEventListener("input", () => { state.query = els.search.value.trim().toLowerCase(); renderCards(); });
 
-// Expand / collapse all cards
 els.expandAll.addEventListener("click", () => {
   state.allOpen = !state.allOpen;
   els.expandAll.textContent = state.allOpen ? "Collapse all" : "Expand all";
@@ -310,9 +339,10 @@ els.expandAll.addEventListener("click", () => {
 });
 
 function matchesFilters(f) {
-  const filterOk = state.filter === "all" || f.severity === state.filter || f.source === state.filter;
+  if (state.severity && f.severity !== state.severity) return false;
+  if (state.source !== "all" && f.source !== state.source) return false;
   const text = `${f.title} ${f.explanation || ""} ${f.message} ${f.code} ${(f.cwe || []).join(" ")}`.toLowerCase();
-  return filterOk && (!state.query || text.includes(state.query));
+  return !state.query || text.includes(state.query);
 }
 
 function renderCards() {
@@ -326,14 +356,23 @@ function renderCards() {
   }
   const visible = data.findings.filter(matchesFilters);
   if (!visible.length) {
-    els.findings.append(emptyMessage("🔍", "No findings match this filter."));
+    els.findings.append(emptyMessage("🔍", "No findings match these filters."));
     return;
   }
-  visible.forEach((f, i) => {
-    const card = makeCard(f);
-    card.style.animationDelay = `${Math.min(i, 10) * 40}ms`;   // cards appear one after another
-    els.findings.append(card);
-  });
+  // Group by severity: High first, then Medium, then Low.
+  let i = 0;
+  for (const sev of ["high", "medium", "low"]) {
+    const group = visible.filter((f) => f.severity === sev);
+    if (!group.length) continue;
+    const title = makeEl("div", `group-title ${sev}`);
+    title.append(makeEl("span", "dot"), document.createTextNode(`${SEV_LABEL[sev]} · ${group.length}`));
+    els.findings.append(title);
+    for (const f of group) {
+      const card = makeCard(f);
+      card.style.animationDelay = `${Math.min(i++, 10) * 35}ms`;   // cards appear one after another
+      els.findings.append(card);
+    }
+  }
 }
 
 function emptyMessage(icon, text) {
@@ -346,16 +385,18 @@ function emptyMessage(icon, text) {
 function makeCard(f) {
   const card = makeEl("article", `card ${f.severity}`);
   if (state.allOpen) card.classList.add("open");
+  const explanation = f.explanation || f.message;
+  const lineText = f.line_start === f.line_end ? `Line ${f.line_start}` : `Lines ${f.line_start}-${f.line_end}`;
 
+  // --- Header (always visible) ---
   const head = makeEl("button", "card-head");
   head.type = "button";
-  head.append(
-    makeEl("span", "chev", "▸"),
-    makeEl("span", `badge ${f.severity}`, f.severity),
-    ...(f.source === "ai" ? [makeEl("span", "badge ai", "🤖 AI")] : []),
-    makeEl("span", "card-title", f.title),
-    makeEl("span", "card-line", f.line_start === f.line_end ? `line ${f.line_start}` : `lines ${f.line_start}-${f.line_end}`),
-  );
+  const main = makeEl("div", "card-main");
+  const title = makeEl("div", "card-title", f.title);
+  if (f.source === "ai") title.append(makeEl("span", "badge ai", "🤖 AI found"));
+  main.append(title, makeEl("div", "card-sub", explanation));
+  head.append(makeEl("span", "sev-icon", SEV_ICON[f.severity]), main, makeEl("span", "line-pill", lineText), makeEl("span", "chev", "▶"));
+
   // Click: open/close the card AND highlight the line in the editor.
   head.addEventListener("click", () => {
     card.classList.toggle("open");
@@ -364,36 +405,65 @@ function makeCard(f) {
     highlightLine(f.line_start, f.line_end);
   });
 
+  // --- Body (visible when open) ---
   const body = makeEl("div", "card-body");
-  body.append(makeEl("p", "", f.explanation || f.message));
-  body.append(labelRow("Problem code"), makeEl("pre", "", f.code));
-  if (f.fix) {
-    body.append(labelRow("Suggested fix", f.fix), makeEl("pre", "fix", f.fix));
+  body.append(section("What's wrong", makeEl("p", "", explanation)));
+  body.append(section("❌ Your code", codeBlock(f.code, f.line_start, "bad")));
+  if (f.fix) body.append(section("✅ Suggested fix", codeBlock(f.fix, null, "good"), copyButton(f.fix)));
+
+  const meta = makeEl("div", "meta-row");
+  for (const cwe of f.cwe || []) {
+    const id = cwe.split(":")[0].trim();
+    const num = id.replace(/\D/g, "");
+    const link = makeEl("a", "tag", id);
+    if (num) {
+      link.href = `https://cwe.mitre.org/data/definitions/${num}.html`;   // official description of this weakness
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.title = cwe;
+    }
+    meta.append(link);
   }
-  const tags = makeEl("div", "tags");
-  (f.cwe || []).forEach((cwe) => tags.append(makeEl("span", "tag", cwe.split(":")[0])));
-  tags.append(makeEl("span", f.source === "ai" ? "tag ai" : "tag", f.source === "ai" ? "found by AI" : "semgrep"));
-  body.append(tags);
+  meta.append(makeEl("span", "tag", f.source === "ai" ? "Found by AI review" : "Found by Semgrep"));
+  body.append(meta);
 
   card.append(head, body);
   return card;
 }
 
-// A small label, plus a "Copy" button when there is text to copy.
-function labelRow(text, copyText) {
-  const row = makeEl("div", "label-row");
-  row.append(makeEl("span", copyText ? "label fix" : "label", text));
-  if (copyText) {
-    const btn = makeEl("button", "btn ghost small", "📋 Copy fix");
-    btn.type = "button";
-    btn.addEventListener("click", async () => {
-      await copyToClipboard(copyText);
-      btn.textContent = "✅ Copied!";
-      setTimeout(() => (btn.textContent = "📋 Copy fix"), 1500);
-    });
-    row.append(btn);
-  }
-  return row;
+function section(titleText, content, action) {
+  const box = makeEl("div", "section");
+  const title = makeEl("div", "section-title");
+  title.append(makeEl("span", "", titleText));
+  if (action) title.append(action);
+  box.append(title, content);
+  return box;
+}
+
+// Code with line numbers (bad = red "-" lines, good = green "+" lines, like a code review diff).
+function codeBlock(text, firstLine, kind) {
+  const block = makeEl("div", `code-block ${kind}`);
+  text.split("\n").forEach((line, i) => {
+    const row = makeEl("div", "row");
+    row.append(
+      makeEl("span", "num", firstLine ? String(firstLine + i) : ""),
+      makeEl("span", "sign", kind === "bad" ? "−" : "+"),
+      makeEl("span", "txt", line || " "),
+    );
+    block.append(row);
+  });
+  return block;
+}
+
+function copyButton(text) {
+  const btn = makeEl("button", "btn ghost small", "📋 Copy");
+  btn.type = "button";
+  btn.addEventListener("click", async () => {
+    await copyToClipboard(text);
+    btn.textContent = "✅ Copied!";
+    setTimeout(() => (btn.textContent = "📋 Copy"), 1500);
+  });
+  return btn;
 }
 
 async function copyToClipboard(text) {

@@ -67,7 +67,10 @@
     <!-- ============ RIGHT: results ============ -->
     <section class="panel results-panel" aria-live="polite">
       <div class="panel-head">
-        <h2>Findings</h2>
+        <div>
+          <h2>Scan results</h2>
+          <div id="status" class="status muted">Results will appear here after a scan.</div>
+        </div>
         <div class="controls">
           <div class="dropdown">
             <button id="report-btn" type="button" class="btn ghost" disabled>⬇ Report ▾</button>
@@ -89,32 +92,43 @@
         <div class="step" data-step="done"><span class="dot"></span>Done</div>
       </div>
 
-      <!-- Security score -->
-      <div class="score-box" id="score-box" hidden>
-        <div class="ring" id="score-ring"><span id="score-grade">A</span></div>
-        <div>
-          <div class="score-title">Security score <b id="score-num">100</b>/100</div>
-          <div class="muted" id="score-text"></div>
-        </div>
+      <!-- Before the first scan -->
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">🛡️</div>
+        <h3>Ready when you are</h3>
+        <p class="muted">Paste code on the left (or click <b>Load sample</b>), then press <b>Scan code</b>.</p>
+        <ul class="welcome-steps">
+          <li><span>1</span>Semgrep checks known dangerous patterns</li>
+          <li><span>2</span>AI explains each problem and finds hidden ones</li>
+          <li><span>3</span>You get a score, simple fixes and a report</li>
+        </ul>
       </div>
 
-      <!-- Filters -->
-      <div class="filters" id="filters" hidden>
-        <div class="chips">
-          <button type="button" class="chip-btn active" data-filter="all">All <span id="count-all"></span></button>
-          <button type="button" class="chip-btn" data-filter="high">High <span id="count-high"></span></button>
-          <button type="button" class="chip-btn" data-filter="medium">Medium <span id="count-medium"></span></button>
-          <button type="button" class="chip-btn" data-filter="low">Low <span id="count-low"></span></button>
-          <button type="button" class="chip-btn" data-filter="ai">🤖 AI <span id="count-ai"></span></button>
-          <button type="button" class="chip-btn" data-filter="semgrep">Semgrep <span id="count-semgrep"></span></button>
+      <!-- Summary: score + severity tiles (tiles also work as filters) -->
+      <div class="summary-grid" id="summary" hidden>
+        <div class="score-card">
+          <div class="ring" id="score-ring"><span id="score-grade">A</span></div>
+          <div>
+            <div class="score-num"><b id="score-num">100</b><span>/100</span></div>
+            <div class="verdict" id="score-verdict"></div>
+          </div>
         </div>
-        <div class="filter-row">
-          <input type="search" id="search" placeholder="Search findings..." aria-label="Search findings">
-          <button type="button" id="expand-all" class="btn ghost small">Expand all</button>
-        </div>
+        <button type="button" class="tile high" data-sev="high"><b id="count-high">0</b><span>High</span></button>
+        <button type="button" class="tile medium" data-sev="medium"><b id="count-medium">0</b><span>Medium</span></button>
+        <button type="button" class="tile low" data-sev="low"><b id="count-low">0</b><span>Low</span></button>
       </div>
 
-      <div id="status" class="status muted">Results will appear here after a scan.</div>
+      <!-- Toolbar: source filter, search, expand -->
+      <div class="toolbar" id="toolbar" hidden>
+        <div class="segmented" role="radiogroup" aria-label="Found by">
+          <button type="button" class="active" data-source="all">All <span id="count-all"></span></button>
+          <button type="button" data-source="ai">🤖 AI <span id="count-ai"></span></button>
+          <button type="button" data-source="semgrep">Semgrep <span id="count-semgrep"></span></button>
+        </div>
+        <input type="search" id="search" placeholder="🔍 Search..." aria-label="Search findings">
+        <button type="button" id="expand-all" class="btn ghost small">Expand all</button>
+      </div>
+
       <div id="findings" class="findings"></div>
     </section>
   </main>

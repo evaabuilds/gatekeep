@@ -58,6 +58,7 @@ Return ONLY a JSON object, no markdown, in exactly this shape:
 {
   "semgrep_notes": [
     {"id": <number of the Semgrep finding>,
+     "title": "<short plain-English name of the problem, max 6 words>",
      "explanation": "<2-3 simple sentences: what is wrong, how an attacker could abuse it>",
      "fix": "<corrected code for just the affected lines>"}
   ],
@@ -208,6 +209,9 @@ def _clean(data: dict, code: str, semgrep_count: int) -> dict:
                 "explanation": str(note.get("explanation", "")).strip(),
                 "fix": str(note.get("fix", "")).strip(),
             }
+            title = str(note.get("title", "")).strip()
+            if title:
+                notes[note["id"]]["title"] = title[:80]
 
     findings = []
     for item in data.get("ai_findings") or []:

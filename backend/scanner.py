@@ -81,8 +81,8 @@ def run_semgrep(code: str, language: str) -> list[dict]:
 def _to_findings(output: dict, code: str) -> list[dict]:
     """Convert raw Semgrep JSON into our own clean finding format."""
     lines = code.splitlines()
-    findings = []
-    seen = set()
+    order = {"high": 0, "medium": 1, "low": 2}
+    by_key = {}   # (title, line) -> finding
 
     for item in output.get("results", []):
         start = item["start"]["line"]
@@ -91,20 +91,14 @@ def _to_findings(output: dict, code: str) -> list[dict]:
         metadata = extra.get("metadata", {})
         rule_id = item.get("check_id", "")
 
-        # Several rule packs can flag the same thing; keep one per rule+line.
-        key = (rule_id.split(".")[-1], start)
-        if key in seen:
-            continue
-        seen.add(key)
-
         cwe = metadata.get("cwe", [])
         if isinstance(cwe, str):
             cwe = [cwe]
 
-        findings.append({
+        finding = {
             "source": "semgrep",
             "rule_id": rule_id,
-            "title": rule_id.split(".")[-1].replace("-", " ").capitalize(),
+            "title": friendly_title(rule_id),
             "severity": SEVERITY_MAP.get(extra.get("severity", ""), "low"),
             "line_start": start,
             "line_end": end,
@@ -113,8 +107,50 @@ def _to_findings(output: dict, code: str) -> list[dict]:
             "cwe": cwe,
             "owasp": metadata.get("owasp", []),
             "references": metadata.get("references", []),
-        })
+        }
 
-    order = {"high": 0, "medium": 1, "low": 2}
+        # Several rules can flag the same problem on the same line.
+        # Keep one per (title, line), and keep the most severe one.
+        key = (finding["title"], start)
+        old = by_key.get(key)
+        if old is None or order[finding["severity"]] < order[old["severity"]]:
+            if old and not finding["cwe"]:
+                finding["cwe"] = old["cwe"]
+            by_key[key] = finding
+
+    findings = list(by_key.values())
     findings.sort(key=lambda f: (order[f["severity"]], f["line_start"]))
     return findings
+
+
+# Semgrep rule ids are long and technical ("python.lang.security.audit.md5-used-as-password").
+# We turn common ones into names a human understands. First match wins.
+FRIENDLY_TITLES = [
+    ("sql", "SQL injection risk"),
+    ("shell-true", "Command injection risk"),
+    ("child-process", "Command injection risk"),
+    ("os-system", "Command injection risk"),
+    ("pickle", "Unsafe deserialization (pickle)"),
+    ("deserial", "Unsafe deserialization"),
+    ("md5", "Weak hashing (MD5)"),
+    ("sha1", "Weak hashing (SHA-1)"),
+    ("insecure-hash", "Weak hashing algorithm"),
+    ("code-string-concat", "Code injection risk"),
+    ("eval", "Dangerous eval() call"),
+    ("xss", "Cross-site scripting (XSS) risk"),
+    ("raw-html", "Cross-site scripting (XSS) risk"),
+    ("direct-response-write", "Cross-site scripting (XSS) risk"),
+    ("csurf", "Missing CSRF protection"),
+    ("csrf", "Missing CSRF protection"),
+    ("secret", "Hardcoded secret"),
+    ("password", "Hardcoded password"),
+]
+
+
+def friendly_title(rule_id: str) -> str:
+    """Readable title for a Semgrep rule id."""
+    name = rule_id.split(".")[-1].lower()
+    for keyword, title in FRIENDLY_TITLES:
+        if keyword in name:
+            return title
+    return name.replace("-", " ").capitalize()
