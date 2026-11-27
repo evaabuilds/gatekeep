@@ -7,7 +7,12 @@ GateKeep checks code in two layers:
 1. **Semgrep** (static analysis) catches *known* vulnerable patterns fast: SQL injection, command injection, unsafe `eval`, weak hashing.
 2. **An AI reviewer** (Google Gemini by default) reads the code like a senior engineer. It explains every Semgrep finding in simple words, and catches what pattern rules miss: hardcoded secrets, broken access control, business-logic bugs.
 
-![GateKeep screenshot](docs/screenshot-ai-review.jpg)
+![GateKeep dark theme](docs/ui-dark.jpg)
+
+<p>
+  <img src="docs/ui-light.jpg" alt="Light theme" width="49%">
+  <img src="docs/ui-gradient.jpg" alt="Gradient theme" width="49%">
+</p>
 
 ## Why two layers?
 
@@ -29,9 +34,17 @@ Rules are fast and predictable; AI understands context. Together they cover more
 ## Features
 
 - Python and JavaScript support
+- **3 themes**: Light, Dark and Gradient (remembered between visits)
+- **Code editor** with line numbers and syntax colours; click a finding to jump to and highlight its line
+- **Upload or drag & drop** a `.py` / `.js` file (language detected from the file name)
+- **Security score** (0-100, grade A-F) for a quick verdict
+- **Filters and search**: by severity, by source (AI / Semgrep), or by text
+- **Copy fix** button, collapsible finding cards, step-by-step scan progress
+- **Scan history**: the last 10 scans, saved only in your browser
+- **Reports**: HTML, PDF (via print) or raw JSON
 - Severity (high / medium / low), CWE ID, problem code and a suggested fix for every finding
 - Plain-language explanations written for beginners
-- **Download report**: a self-contained HTML report (print it to PDF from the browser). [See an example](docs/sample-report.html)
+- Example HTML report: [docs/sample-report.html](docs/sample-report.html)
 - Works without AI too: if the AI is off, rate-limited or down, you still get the Semgrep results (graceful degradation)
 - Provider-agnostic AI layer: Gemini, Xiaomi MiMo or a local Ollama model, switched with one line in `.env`
 

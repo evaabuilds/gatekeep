@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GateKeep: UI style options</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #eef0f4; color: #222; padding: 30px; }
+  h1 { margin: 0 0 4px; } .sub { color: #666; margin: 0 0 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; }
+  .opt h2 { margin: 0 0 4px; font-size: 18px; } .opt p { margin: 0 0 10px; color: #555; font-size: 14px; }
+  .mock { border-radius: 14px; overflow: hidden; height: 330px; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,.12); }
+  .bar { padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .logo { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 14px; color: #fff; }
+  .body { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; }
+  .pane { border-radius: 10px; padding: 10px; font-size: 11px; display: flex; flex-direction: column; gap: 6px; }
+  .code { font-family: Consolas, monospace; line-height: 1.6; flex: 1; border-radius: 6px; padding: 6px 8px; }
+  .ln { opacity: .45; margin-right: 8px; }
+  .hl { border-radius: 3px; }
+  .btn { border-radius: 8px; padding: 6px 10px; text-align: center; font-weight: 600; font-size: 11px; }
+  .card { border-radius: 8px; padding: 7px 8px; border-left: 4px solid; }
+  .chip { display: inline-block; border-radius: 99px; padding: 1px 7px; font-size: 9px; font-weight: 700; margin-right: 4px; }
+  .score { display: flex; align-items: center; gap: 8px; }
+  .ring { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 15px; }
+  .filters span { display: inline-block; border-radius: 6px; padding: 2px 7px; font-size: 9px; margin-right: 3px; }
+  .toggle { margin-left: auto; font-size: 12px; border-radius: 99px; padding: 3px 9px; }
+
+  /* A: Clean & Light */
+  .a { background: #fff; } .a .bar { border-bottom: 1px solid #eceef2; color: #1b1f24; }
+  .a .logo { background: #2563eb; } .a .body { background: #f7f8fa; }
+  .a .pane { background: #fff; border: 1px solid #e6e8ec; } .a .code { background: #fafbfc; color: #24292f; }
+  .a .kw { color: #cf222e; } .a .str { color: #0a3069; } .a .hl { background: #fff1c2; }
+  .a .btn { background: #2563eb; color: #fff; } .a .card { background: #fff; border: 1px solid #eceef2; border-left: 4px solid #d1242f; }
+  .a .card.m { border-left-color: #d97706; } .a .chip.h { background: #ffebe9; color: #d1242f; } .a .chip.m { background: #fff4e0; color: #b45309; }
+  .a .chip.ai { background: #f1ecff; color: #6d28d9; } .a .ring { border: 4px solid #d97706; color: #b45309; }
+  .a .filters span { background: #f0f2f5; color: #444; } .a .filters span.on { background: #2563eb; color: #fff; }
+
+  /* B: Dark Pro */
+  .b { background: #0b0f17; color: #e6edf3; } .b .bar { border-bottom: 1px solid #1d2533; }
+  .b .logo { background: linear-gradient(135deg, #22d3ee, #6366f1); } .b .body { background: radial-gradient(circle at 20% 0%, #121a2b, #0b0f17); }
+  .b .pane { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(6px); }
+  .b .code { background: #070a10; color: #c9d1d9; } .b .kw { color: #ff7b72; } .b .str { color: #a5d6ff; } .b .hl { background: rgba(250,204,21,.18); }
+  .b .btn { background: linear-gradient(90deg, #22d3ee, #6366f1); color: #fff; box-shadow: 0 0 14px rgba(99,102,241,.5); }
+  .b .card { background: rgba(255,255,255,.05); border-left-color: #f85149; } .b .card.m { border-left-color: #f0b429; }
+  .b .chip.h { background: rgba(248,81,73,.18); color: #ff8b84; } .b .chip.m { background: rgba(240,180,41,.18); color: #f0b429; }
+  .b .chip.ai { background: rgba(167,139,250,.2); color: #c4b5fd; } .b .ring { border: 4px solid #f0b429; color: #f0b429; box-shadow: 0 0 12px rgba(240,180,41,.4); }
+  .b .filters span { background: rgba(255,255,255,.07); color: #aab; } .b .filters span.on { background: #22d3ee; color: #001; }
+
+  /* C: Modern Gradient */
+  .c { background: linear-gradient(135deg, #fdf2ff, #eef4ff 50%, #e9fff7); color: #1e1b4b; }
+  .c .bar { font-size: 16px; } .c .logo { background: linear-gradient(135deg, #ec4899, #8b5cf6, #06b6d4); }
+  .c .pane { background: rgba(255,255,255,.75); border: 1px solid rgba(139,92,246,.18); box-shadow: 0 4px 16px rgba(139,92,246,.10); }
+  .c .code { background: #fff; color: #312e81; } .c .kw { color: #db2777; } .c .str { color: #0891b2; } .c .hl { background: #fde68a; }
+  .c .btn { background: linear-gradient(90deg, #ec4899, #8b5cf6); color: #fff; border-radius: 99px; }
+  .c .card { background: #fff; border-left-color: #ec4899; } .c .card.m { border-left-color: #f59e0b; }
+  .c .chip.h { background: #fce7f3; color: #be185d; } .c .chip.m { background: #fef3c7; color: #b45309; } .c .chip.ai { background: #ede9fe; color: #6d28d9; }
+  .c .ring { background: conic-gradient(#8b5cf6 0 62%, #e9e3ff 0); color: #4c1d95; position: relative; }
+  .c .ring b { background: #fff; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; }
+  .c .filters span { background: #fff; color: #555; border: 1px solid #e4e0ff; } .c .filters span.on { background: #8b5cf6; color: #fff; }
+
+  .notes { margin-top: 28px; background: #fff; border-radius: 12px; padding: 16px 20px; font-size: 14px; line-height: 1.7; }
+</style>
+</head>
+<body>
+  <h1>GateKeep: UI style options</h1>
+  <p class="sub">Quick mockups. Pick A, B or C (or D = A + B with a 🌙/☀️ toggle). Each one already shows some new options: line numbers, highlighted line, filters, score, AI tags.</p>
+
+  <div class="grid">
+    <div class="opt">
+      <h2>A) Clean &amp; Light</h2>
+      <p>White, calm, professional. Like GitHub / Notion.</p>
+      <div class="mock a">
+        <div class="bar"><span class="logo">⛨</span>GateKeep <span class="toggle" style="background:#f0f2f5">☀️ / 🌙</span></div>
+        <div class="body">
+          <div class="pane">
+            <div class="code"><span class="ln">7</span><br><span class="ln">8</span>API_KEY = <span class="str">"sk_live_..."</span><br><span class="ln">9</span><br><span class="ln">14</span><span class="hl"><span class="kw">cur</span>.execute(<span class="str">"SELECT ..."</span> % u)</span><br><span class="ln">15</span><span class="kw">return</span> cur.fetchone()</div>
+            <div class="btn">Scan code</div>
+          </div>
+          <div class="pane">
+            <div class="score"><div class="ring">C</div><div><b>Security score 62/100</b><br>5 high · 4 medium</div></div>
+            <div class="filters"><span class="on">All</span><span>High</span><span>Medium</span><span>AI</span></div>
+            <div class="card"><span class="chip h">HIGH</span><b>SQL injection</b> · line 15</div>
+            <div class="card"><span class="chip h">HIGH</span><span class="chip ai">AI</span><b>Hardcoded key</b> · line 8</div>
+            <div class="card m"><span class="chip m">MEDIUM</span><b>Weak hash (MD5)</b> · line 31</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt">
+      <h2>B) Dark Pro</h2>
+      <p>Dark, glowing accents, glass panels. Like VS Code / a hacker tool.</p>
+      <div class="mock b">
+        <div class="bar"><span class="logo">⛨</span>GateKeep <span class="toggle" style="background:rgba(255,255,255,.08)">🌙 / ☀️</span></div>
+        <div class="body">
+          <div class="pane">
+            <div class="code"><span class="ln">7</span><br><span class="ln">8</span>API_KEY = <span class="str">"sk_live_..."</span><br><span class="ln">9</span><br><span class="ln">14</span><span class="hl"><span class="kw">cur</span>.execute(<span class="str">"SELECT ..."</span> % u)</span><br><span class="ln">15</span><span class="kw">return</span> cur.fetchone()</div>
+            <div class="btn">Scan code</div>
+          </div>
+          <div class="pane">
+            <div class="score"><div class="ring">C</div><div><b>Security score 62/100</b><br>5 high · 4 medium</div></div>
+            <div class="filters"><span class="on">All</span><span>High</span><span>Medium</span><span>AI</span></div>
+            <div class="card"><span class="chip h">HIGH</span><b>SQL injection</b> · line 15</div>
+            <div class="card"><span class="chip h">HIGH</span><span class="chip ai">AI</span><b>Hardcoded key</b> · line 8</div>
+            <div class="card m"><span class="chip m">MEDIUM</span><b>Weak hash (MD5)</b> · line 31</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt">
+      <h2>C) Modern Gradient</h2>
+      <p>Soft colourful gradients, round buttons, playful. Like startup sites.</p>
+      <div class="mock c">
+        <div class="bar"><span class="logo">⛨</span>GateKeep <span class="toggle" style="background:#fff">☀️ / 🌙</span></div>
+        <div class="body">
+          <div class="pane">
+            <div class="code"><span class="ln">7</span><br><span class="ln">8</span>API_KEY = <span class="str">"sk_live_..."</span><br><span class="ln">9</span><br><span class="ln">14</span><span class="hl"><span class="kw">cur</span>.execute(<span class="str">"SELECT ..."</span> % u)</span><br><span class="ln">15</span><span class="kw">return</span> cur.fetchone()</div>
+            <div class="btn">Scan code</div>
+          </div>
+          <div class="pane">
+            <div class="score"><div class="ring"><b>C</b></div><div><b>Security score 62/100</b><br>5 high · 4 medium</div></div>
+            <div class="filters"><span class="on">All</span><span>High</span><span>Medium</span><span>AI</span></div>
+            <div class="card"><span class="chip h">HIGH</span><b>SQL injection</b> · line 15</div>
+            <div class="card"><span class="chip h">HIGH</span><span class="chip ai">AI</span><b>Hardcoded key</b> · line 8</div>
+            <div class="card m"><span class="chip m">MEDIUM</span><b>Weak hash (MD5)</b> · line 31</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <b>New options you can pick (any number):</b><br>
+    1. Code editor with line numbers + colours &nbsp;·&nbsp; 2. Click a card → that line highlights in the code &nbsp;·&nbsp;
+    3. Filters (High/Medium/Low, AI/Semgrep) + search &nbsp;·&nbsp; 4. "Copy fix" button &nbsp;·&nbsp;
+    5. File upload / drag &amp; drop &nbsp;·&nbsp; 6. Security score A–F &nbsp;·&nbsp; 7. Scan history &nbsp;·&nbsp;
+    8. Smooth step-by-step loading animation &nbsp;·&nbsp; 9. Report as HTML / PDF / JSON &nbsp;·&nbsp; 10. Collapse / expand cards
+  </div>
+</body>
+</html>

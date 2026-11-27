@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GateKeep · AI Code Security Gate</title>
   <link rel="stylesheet" href="/static/style.css">
+  <!-- Apply the saved theme before the page paints, so it doesn't flash -->
+  <script>document.documentElement.dataset.theme = localStorage.getItem("gk-theme") || "dark";</script>
 </head>
 <body>
   <header class="topbar">
@@ -15,46 +17,120 @@
         <p class="tagline">Paste code. Find security issues before they ship.</p>
       </div>
     </div>
+    <div class="top-actions">
+      <button id="history-btn" type="button" class="btn ghost">🕘 History</button>
+      <div class="theme-switch" role="radiogroup" aria-label="Theme">
+        <button type="button" data-theme-choice="light" title="Light">☀️ Light</button>
+        <button type="button" data-theme-choice="dark" title="Dark">🌙 Dark</button>
+        <button type="button" data-theme-choice="gradient" title="Gradient">🌈 Gradient</button>
+      </div>
+    </div>
   </header>
 
   <main class="layout">
-    <!-- Left side: the code input -->
-    <section class="panel input-panel">
+    <!-- ============ LEFT: code input ============ -->
+    <section class="panel input-panel" id="drop-zone">
       <div class="panel-head">
         <h2>Your code</h2>
         <div class="controls">
-          <label for="language" class="visually-hidden">Language</label>
-          <select id="language">
-            <option value="python">Python</option>
-            <option value="javascript">JavaScript</option>
+          <select id="language" aria-label="Language">
+            <option value="python">🐍 Python</option>
+            <option value="javascript">🟨 JavaScript</option>
           </select>
-          <button id="sample-btn" type="button" class="ghost">Load sample</button>
+          <button id="sample-btn" type="button" class="btn ghost">Load sample</button>
+          <label class="btn ghost" for="file-input">📂 Upload</label>
+          <input type="file" id="file-input" accept=".py,.js,.mjs,.cjs" hidden>
+          <button id="clear-btn" type="button" class="btn ghost" title="Clear code">✕</button>
         </div>
       </div>
-      <textarea id="code" spellcheck="false"
-        placeholder="Paste Python or JavaScript code here..."></textarea>
+
+      <!-- Code editor: a transparent textarea on top of a coloured copy of the code -->
+      <div class="editor">
+        <pre class="gutter" id="gutter" aria-hidden="true">1</pre>
+        <div class="editor-main">
+          <pre class="highlight" id="highlight" aria-hidden="true"></pre>
+          <textarea id="code" spellcheck="false" autocomplete="off" wrap="off"
+            placeholder="Paste Python or JavaScript code here, or drop a .py / .js file..."></textarea>
+        </div>
+        <div class="drop-hint">Drop your .py or .js file here</div>
+      </div>
+
       <div class="panel-foot">
         <span id="char-count" class="muted">0 / 50,000 characters</span>
         <div class="controls">
-          <label class="toggle"><input type="checkbox" id="use-ai" checked> AI review</label>
-          <button id="scan-btn" type="button" class="primary">Scan code</button>
+          <label class="switch"><input type="checkbox" id="use-ai" checked><span class="slider"></span> AI review</label>
+          <button id="scan-btn" type="button" class="btn primary">Scan code</button>
         </div>
       </div>
     </section>
 
-    <!-- Right side: the results -->
+    <!-- ============ RIGHT: results ============ -->
     <section class="panel results-panel" aria-live="polite">
       <div class="panel-head">
         <h2>Findings</h2>
         <div class="controls">
-          <div id="summary" class="summary"></div>
-          <button id="report-btn" type="button" class="ghost" disabled>Download report</button>
+          <div class="dropdown">
+            <button id="report-btn" type="button" class="btn ghost" disabled>⬇ Report ▾</button>
+            <div class="menu" id="report-menu" hidden>
+              <button type="button" data-format="html">📄 HTML report</button>
+              <button type="button" data-format="pdf">🖨️ PDF (print)</button>
+              <button type="button" data-format="json">🧾 JSON data</button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Step-by-step progress shown while scanning -->
+      <div class="progress" id="progress" hidden>
+        <div class="step" data-step="semgrep"><span class="dot"></span>Semgrep scanning</div>
+        <div class="line"></div>
+        <div class="step" data-step="ai"><span class="dot"></span>AI reviewing</div>
+        <div class="line"></div>
+        <div class="step" data-step="done"><span class="dot"></span>Done</div>
+      </div>
+
+      <!-- Security score -->
+      <div class="score-box" id="score-box" hidden>
+        <div class="ring" id="score-ring"><span id="score-grade">A</span></div>
+        <div>
+          <div class="score-title">Security score <b id="score-num">100</b>/100</div>
+          <div class="muted" id="score-text"></div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters" id="filters" hidden>
+        <div class="chips">
+          <button type="button" class="chip-btn active" data-filter="all">All <span id="count-all"></span></button>
+          <button type="button" class="chip-btn" data-filter="high">High <span id="count-high"></span></button>
+          <button type="button" class="chip-btn" data-filter="medium">Medium <span id="count-medium"></span></button>
+          <button type="button" class="chip-btn" data-filter="low">Low <span id="count-low"></span></button>
+          <button type="button" class="chip-btn" data-filter="ai">🤖 AI <span id="count-ai"></span></button>
+          <button type="button" class="chip-btn" data-filter="semgrep">Semgrep <span id="count-semgrep"></span></button>
+        </div>
+        <div class="filter-row">
+          <input type="search" id="search" placeholder="Search findings..." aria-label="Search findings">
+          <button type="button" id="expand-all" class="btn ghost small">Expand all</button>
+        </div>
+      </div>
+
       <div id="status" class="status muted">Results will appear here after a scan.</div>
       <div id="findings" class="findings"></div>
     </section>
   </main>
+
+  <!-- Scan history drawer -->
+  <aside class="drawer" id="history-drawer" hidden>
+    <div class="drawer-head">
+      <h2>🕘 Scan history</h2>
+      <button type="button" id="history-close" class="btn ghost small">✕</button>
+    </div>
+    <p class="muted">Last 10 scans, saved only in this browser.</p>
+    <div id="history-list"></div>
+    <button type="button" id="history-clear" class="btn ghost small">Clear history</button>
+  </aside>
+
+  <div class="toast" id="toast" hidden></div>
 
   <footer class="footer muted">
     Built with FastAPI, Semgrep and an AI reviewer. AI suggestions can be wrong: always double-check fixes.
