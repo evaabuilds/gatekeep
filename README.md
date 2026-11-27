@@ -92,6 +92,12 @@ notepad .env      # paste your key after AI_API_KEY=
 ```
 
 Open http://127.0.0.1:8000, click **Load sample**, then **Scan code**.
+
+After the first setup, one command does it all (checks setup, starts the server, opens the browser):
+
+```powershell
+.\start.ps1
+```
 API docs are at http://127.0.0.1:8000/docs.
 
 Run the tests:
